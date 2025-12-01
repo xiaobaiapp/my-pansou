@@ -91,8 +91,14 @@
         window.onerror = function(msg) { document.getElementById('globalError').classList.remove('hidden'); document.getElementById('globalError').innerText = msg; };
 
         document.addEventListener('DOMContentLoaded', () => {
-            const RENDER_URL = "https://pan-2iav.onrender.com";
             
+
+            const _part1 = "aHR0cHM6Ly9wYW4tMmlhdg=="; 
+            const _part2 = "Lm9ucmVuZGVyLmNvbQ==";     
+            
+            // jm函数
+            const getEndpoint = () => atob(_part1) + atob(_part2);
+
             let GLOBAL_ITEMS = [];
             let FILTERED_ITEMS = [];
             let CURRENT_PAGE = 0;
@@ -124,10 +130,12 @@
                 ui.btn.disabled = true;
                 ui.btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i>`;
                 ui.list.innerHTML = `<div class="animate-pulse space-y-3">${[1,2,3,4,5].map(()=>`<div class="bg-gray-50 h-20 rounded-xl"></div>`).join('')}</div>`;
-                ui.status.innerHTML = `<span class="text-blue-500 flex items-center gap-1"><i class="ph ph-spinner animate-spin"></i> 正在全网搜索...</span>`;
+                ui.status.innerHTML = `<span class="text-blue-500 flex items-center gap-1"><i class="ph ph-spinner animate-spin"></i> 正在努力搜索中...</span>`;
                 ui.scroll.scrollTop = 0;
 
                 try {
+                    // jm
+                    const RENDER_URL = getEndpoint(); 
                     const targetUrl = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
                     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
                     
@@ -186,7 +194,7 @@
                     const titleRaw = item.note || item.title || "未知资源"; 
                     const link = item.url || item.link || "#";
                     let typeRaw = (item._disk_type || item.source || "").toLowerCase();
-                    let timeRaw = item.datetime || item.time || "";
+                    const timeRaw = item.datetime || item.time || "";
 
                     const linkLower = link.toLowerCase();
                     const titleLower = titleRaw.toLowerCase();
@@ -195,9 +203,7 @@
                     let typeIcon = "ph-cloud";
                     let colorClass = "bg-gray-100 text-gray-600";
 
-                    // --- 识别逻辑更新 ---
-                    
-                    // 1. 协议类
+                    // --- 1. 协议类 ---
                     if (linkLower.startsWith("magnet") || titleLower.includes("magnet")) {
                         typeLabel = "磁力"; typeIcon = "ph-magnet"; colorClass = "bg-purple-50 text-purple-600";
                     } 
@@ -208,17 +214,23 @@
                         typeLabel = "迅雷"; typeIcon = "ph-lightning"; colorClass = "bg-sky-50 text-sky-600";
                     }
                     
-                    // 2. 域名识别 (123/139/115/UC/Quark/Ali/Baidu)
+                    // --- 2. 域名识别 (123全家桶/139/115/UC/Quark/Ali/Baidu) ---
                     
-                    // 123 (添加了 123684.com)
-                    else if (linkLower.includes("123pan") || linkLower.includes("123684.com") || titleLower.includes("123")) {
+                    // 123 云盘 (新增了 123912, 123865)
+                    else if (
+                        linkLower.includes("123pan") || 
+                        linkLower.includes("123684") || 
+                        linkLower.includes("123912") || 
+                        linkLower.includes("123865") || 
+                        titleLower.includes("123")
+                    ) {
                         typeLabel = "123云盘"; typeIcon = "ph-hard-drives"; colorClass = "bg-emerald-50 text-emerald-600";
                     }
                     // 139
                     else if (linkLower.includes("139.com") || titleLower.includes("移动云盘") || titleLower.includes("139")) {
                         typeLabel = "移动云盘"; typeIcon = "ph-device-mobile"; colorClass = "bg-pink-50 text-pink-600";
                     }
-                    // 115 (添加了 115cdn.com)
+                    // 115
                     else if (linkLower.includes("115.com") || linkLower.includes("115cdn.com") || titleLower.includes("115")) {
                         typeLabel = "115"; typeIcon = "ph-folder-lock"; colorClass = "bg-indigo-50 text-indigo-600";
                     }
@@ -239,11 +251,10 @@
                         typeLabel = "百度"; typeIcon = "ph-hard-drives"; colorClass = "bg-red-50 text-red-600";
                     }
 
-                    // --- 时间处理逻辑 (修复 0001-01-01) ---
+                    // --- 时间处理 ---
                     let displayTime = "";
                     if(timeRaw && timeRaw.length > 5 && !timeRaw.startsWith("0001")) {
                         try {
-                            // 如果是 ISO 时间 (2025-11-27T...) 截取前半段
                             if(timeRaw.includes('T')) {
                                 displayTime = timeRaw.split('T')[0];
                             } else {
@@ -251,8 +262,6 @@
                             }
                         } catch(e) {}
                     }
-                    // 如果时间是空的，就直接不显示时间组件，或者显示“未知”
-                    // 这里我们选择：如果有时间显示时间，没时间显示“资源”二字占位，保持排版对齐
                     let timeHtml = displayTime ? `<span class="text-xs text-gray-400">${displayTime}</span>` : `<span class="text-xs text-gray-300">近期</span>`;
 
                     html += `
