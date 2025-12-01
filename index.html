@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>搜</title>
+    <title>简 搜</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -36,7 +36,7 @@
     <nav class="w-full max-w-3xl px-6 py-4 md:py-6 flex justify-between items-center z-10 shrink-0">
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-lg">简</div>
-            <span class="font-semibold text-lg tracking-tight">简 搜</span>
+            <span class="font-semibold text-lg tracking-tight">搜</span>
         </div>
         <a href="https://github.com/fish2018/pansou" target="_blank" class="text-gray-400 hover:text-black transition-colors"><i class="ph ph-github-logo text-2xl"></i></a>
     </nav>
@@ -127,11 +127,9 @@
                 ui.loadArea.classList.add('hidden');
                 
                 ui.btn.disabled = true;
-               
                 ui.btn.innerHTML = `<span>ing...</span><i class="ph ph-spinner animate-spin"></i>`;
                 
                 ui.list.innerHTML = `<div class="animate-pulse space-y-3">${[1,2,3,4,5].map(()=>`<div class="bg-gray-50 h-20 rounded-xl"></div>`).join('')}</div>`;
-                
                 ui.status.innerHTML = `<span class="text-blue-500 flex items-center gap-1"><i class="ph ph-spinner animate-spin"></i> 正在努力搜索中...</span>`;
                 ui.scroll.scrollTop = 0;
 
@@ -165,6 +163,7 @@
                     });
 
                     if (FILTERED_ITEMS.length > 0) {
+                        // 修改：共找到
                         ui.status.innerHTML = `<span class="text-green-600">共找到 ${FILTERED_ITEMS.length} 个资源</span>`;
                         CURRENT_PAGE = 0;
                         ui.list.innerHTML = '';
