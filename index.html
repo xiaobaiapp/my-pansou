@@ -35,7 +35,7 @@
     <main class="w-full max-w-2xl px-6 mt-10 flex-1 flex flex-col">
         <div class="text-center mb-10 animate-fade-in">
             <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-black">探索云端资源</h1>
-            <p class="text-gray-500">极速搜索</p>
+            <p class="text-gray-500">Render 引擎 · Vercel 加速</p>
         </div>
 
         <div class="relative group z-20 animate-fade-in">
@@ -51,6 +51,8 @@
             </button>
         </div>
 
+        <div id="debugArea" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-mono break-all"></div>
+
         <div id="statusArea" class="mt-8"></div>
         <div id="resultsList" class="space-y-4 pb-20"></div>
     </main>
@@ -58,7 +60,7 @@
     <footer class="w-full py-6 text-center text-gray-400 text-sm mt-auto"><p>Designed for Old Buddy</p></footer>
 
     <script>
-        // 你的 Render 后端地址
+        // 你的 Render 后端地址 (我反复确认了，就是这个，没错！)
         const RENDER_URL = "https://pan-2iav.onrender.com";
 
         const ui = {
@@ -66,6 +68,7 @@
             btn: document.getElementById('searchBtn'),
             list: document.getElementById('resultsList'),
             status: document.getElementById('statusArea'),
+            debug: document.getElementById('debugArea')
         };
 
         const skeletonHTML = `<div class="animate-pulse space-y-4">${[1,2,3].map(()=>`<div class="bg-white p-5 rounded-2xl border border-gray-100 h-24"></div>`).join('')}</div>`;
@@ -74,49 +77,72 @@
             const query = ui.input.value.trim();
             if (!query) return;
 
+            // 重置状态
             ui.btn.disabled = true;
             ui.btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i>`;
             ui.list.innerHTML = skeletonHTML;
             ui.status.innerHTML = '';
+            ui.debug.classList.add('hidden');
+            ui.debug.innerHTML = '';
 
             try {
-                // 使用 AllOrigins 代理
-                const target = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}&timestamp=${new Date().getTime()}`;
+                const targetUrl = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
                 
+                // --- 核心修改：切换到 corsproxy.io (目前最稳的代理) ---
+                // 注意：这里不需要 encodeURIComponent(targetUrl)，直接拼接即可
+                const proxyUrl = `https://corsproxy.io/?${targetUrl}`;
+                
+                console.log(`正在请求: ${proxyUrl}`); // 方便你在控制台看
+
                 const res = await fetch(proxyUrl);
-                if (!res.ok) throw new Error("Network Error");
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP 错误: ${res.status} ${res.statusText}`);
+                }
                 
                 const rawData = await res.json();
-                
-                // --- 解析 JSON 结构 ---
+                console.log("获取到的原始数据:", rawData); // 打印数据
+
+                // --- 解析逻辑 (针对你的嵌套结构) ---
                 let allItems = [];
                 
-                // 1. 检查是否存在 data.merged_by_type
+                // 1. 优先处理 merged_by_type (你的数据结构)
                 if (rawData && rawData.data && rawData.data.merged_by_type) {
                     const groups = rawData.data.merged_by_type;
-                    
-                    // 2. 遍历所有分类 (aliyun, quark, baidu 等) 并合并成一个大数组
                     Object.keys(groups).forEach(type => {
                         const itemsInGroup = groups[type];
                         if (Array.isArray(itemsInGroup)) {
                             itemsInGroup.forEach(item => {
-                                // 给每个 item 打上类型标签 (aliyun -> alipan)
-                                item._disk_type = type; 
+                                item._disk_type = type; // 标记来源
                                 allItems.push(item);
                             });
                         }
                     });
-                } else if (Array.isArray(rawData.data)) {
-                    // 兼容旧结构
+                } 
+                // 2. 备用处理 (万一结构变了)
+                else if (rawData && Array.isArray(rawData.data)) {
                     allItems = rawData.data;
+                } else if (Array.isArray(rawData)) {
+                    allItems = rawData;
                 }
 
                 renderResults(allItems);
 
             } catch (err) {
-                console.error(err);
-                ui.status.innerHTML = `<div class="text-center py-10 text-red-500">搜索出错了，请检查 Render 服务状态</div>`;
+                console.error("搜索失败详情:", err);
+                
+                // 显示具体的错误信息给老伙计看
+                ui.debug.classList.remove('hidden');
+                ui.debug.innerHTML = `
+                    <strong>❌ 出错了:</strong><br>
+                    ${err.message}<br><br>
+                    <strong>可能的原因:</strong><br>
+                    1. Render 服务正在休眠 (请等待 30秒 再试)<br>
+                    2. 代理服务 corsproxy.io 暂时繁忙<br>
+                    3. 网络不通畅
+                `;
+
+                ui.status.innerHTML = `<div class="text-center py-4 text-gray-500">请求失败，请查看上方红色报错</div>`;
                 ui.list.innerHTML = '';
             } finally {
                 ui.btn.disabled = false;
@@ -128,7 +154,7 @@
             ui.list.innerHTML = '';
 
             if (!items || items.length === 0) {
-                ui.status.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到捏QwQ</div>`;
+                ui.status.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到 (数据为空) 🐢</div>`;
                 return;
             }
 
@@ -136,38 +162,20 @@
 
             let html = '';
             items.forEach((item, index) => {
-                // --字段映射--
                 const title = item.note || item.title || "未知资源"; 
                 const link = item.url || item.link || "#";
                 const typeRaw = item._disk_type || item.source || "cloud";
-                const time = item.datetime ? new Date(item.datetime).toLocaleDateString() : (item.time || "");
+                const timeRaw = item.datetime || item.time || "";
+                
+                // 简单的日期格式化
+                let time = timeRaw;
+                if(timeRaw.includes('T')) {
+                    try { time = new Date(timeRaw).toLocaleDateString(); } catch(e){}
+                }
 
-                // 优化类型显示
-                let typeLabel = "网盘";
+                let typeLabel = typeRaw;
                 let tagClass = "bg-gray-100 text-gray-600";
                 
                 if(typeRaw.includes("ali")) { typeLabel = "阿里云盘"; tagClass = "bg-orange-50 text-orange-600"; }
                 else if(typeRaw.includes("quark")) { typeLabel = "夸克云盘"; tagClass = "bg-blue-50 text-blue-600"; }
-                else if(typeRaw.includes("baidu")) { typeLabel = "百度网盘"; tagClass = "bg-red-50 text-red-600"; }
-                else { typeLabel = typeRaw; }
-
-                html += `
-                <a href="${link}" target="_blank" class="block group animate-fade-in" style="animation-delay: ${index * 0.05}s">
-                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${typeLabel}</span>
-                            <span class="text-xs text-gray-400">${time}</span>
-                        </div>
-                        <h3 class="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
-                            ${title.replace(/<[^>]+>/g, '')}
-                        </h3>
-                    </div>
-                </a>`;
-            });
-            ui.list.innerHTML = html;
-        }
-
-        function handleEnter(e) { if (e.key === 'Enter') doSearch(); }
-    </script>
-</body>
-</html>
+                else if(typeRaw.includes("baidu")) { typeLabel = "百度网盘"; tagClass = "bg-red-50
