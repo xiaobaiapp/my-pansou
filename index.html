@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>极简搜</title>
+    <title>简 搜</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -26,7 +26,6 @@
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 20px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background-color: #d1d5db; }
-        /* 修复iOS滚动回弹 */
         body { -webkit-overflow-scrolling: touch; }
     </style>
 </head>
@@ -36,8 +35,8 @@
 
     <nav class="w-full max-w-3xl px-6 py-4 md:py-6 flex justify-between items-center z-10 shrink-0">
         <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-lg">P</div>
-            <span class="font-semibold text-lg tracking-tight">Pansou</span>
+            <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-lg">简</div>
+            <span class="font-semibold text-lg tracking-tight">简 搜</span>
         </div>
         <a href="https://github.com/fish2018/pansou" target="_blank" class="text-gray-400 hover:text-black transition-colors"><i class="ph ph-github-logo text-2xl"></i></a>
     </nav>
@@ -128,9 +127,11 @@
                 ui.loadArea.classList.add('hidden');
                 
                 ui.btn.disabled = true;
+               
                 ui.btn.innerHTML = `<span>ing...</span><i class="ph ph-spinner animate-spin"></i>`;
                 
                 ui.list.innerHTML = `<div class="animate-pulse space-y-3">${[1,2,3,4,5].map(()=>`<div class="bg-gray-50 h-20 rounded-xl"></div>`).join('')}</div>`;
+                
                 ui.status.innerHTML = `<span class="text-blue-500 flex items-center gap-1"><i class="ph ph-spinner animate-spin"></i> 正在努力搜索中...</span>`;
                 ui.scroll.scrollTop = 0;
 
@@ -203,7 +204,7 @@
                     let typeIcon = "ph-cloud";
                     let colorClass = "bg-gray-100 text-gray-600";
 
-                    // --- 1. 协议类 ---
+                    // --- 协议 ---
                     if (linkLower.startsWith("magnet") || titleLower.includes("magnet")) {
                         typeLabel = "磁力"; typeIcon = "ph-magnet"; colorClass = "bg-purple-50 text-purple-600";
                     } 
@@ -214,14 +215,10 @@
                         typeLabel = "迅雷"; typeIcon = "ph-lightning"; colorClass = "bg-sky-50 text-sky-600";
                     }
                     
-                    // --- 2. 网盘识别 ---
-                    
-                    // 天翼云盘 (189) - 新增
+                    // --- 网盘 ---
                     else if (linkLower.includes("cloud.189.cn") || titleLower.includes("天翼") || titleLower.includes("189")) {
-                        typeLabel = "天翼云盘"; typeIcon = "ph-cloud-sun"; colorClass = "bg-teal-50 text-teal-600"; // Teal
+                        typeLabel = "天翼云盘"; typeIcon = "ph-cloud-sun"; colorClass = "bg-teal-50 text-teal-600";
                     }
-                    
-                    // 123全家桶
                     else if (
                         linkLower.includes("123pan") || linkLower.includes("123684") || 
                         linkLower.includes("123912") || linkLower.includes("123865") || 
@@ -229,32 +226,25 @@
                     ) {
                         typeLabel = "123云盘"; typeIcon = "ph-hard-drives"; colorClass = "bg-emerald-50 text-emerald-600";
                     }
-                    // 139
                     else if (linkLower.includes("139.com") || titleLower.includes("移动云盘") || titleLower.includes("139")) {
                         typeLabel = "移动云盘"; typeIcon = "ph-device-mobile"; colorClass = "bg-pink-50 text-pink-600";
                     }
-                    // 115
                     else if (linkLower.includes("115.com") || linkLower.includes("115cdn.com") || titleLower.includes("115")) {
                         typeLabel = "115"; typeIcon = "ph-folder-lock"; colorClass = "bg-indigo-50 text-indigo-600";
                     }
-                    // UC
                     else if (linkLower.includes("uc.cn") || titleLower.includes("uc")) {
                         typeLabel = "UC网盘"; typeIcon = "ph-planet"; colorClass = "bg-amber-50 text-amber-600";
                     }
-                    // Quark
                     else if (linkLower.includes("quark") || titleLower.includes("夸克")) {
                         typeLabel = "夸克"; typeIcon = "ph-atom"; colorClass = "bg-blue-50 text-blue-600";
                     }
-                    // Ali
                     else if (linkLower.includes("ali") || titleLower.includes("阿里")) {
                         typeLabel = "阿里云"; typeIcon = "ph-cloud-arrow-up"; colorClass = "bg-orange-50 text-orange-600";
                     }
-                    // Baidu
                     else if (linkLower.includes("baidu") || titleLower.includes("百度")) {
                         typeLabel = "百度"; typeIcon = "ph-hard-drives"; colorClass = "bg-red-50 text-red-600";
                     }
 
-                    // --- 时间处理 ---
                     let displayTime = "";
                     if(timeRaw && timeRaw.length > 5 && !timeRaw.startsWith("0001")) {
                         try {
