@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://pan-2iav.onrender.com/api/:path*"
-    }
-  ]
-}
