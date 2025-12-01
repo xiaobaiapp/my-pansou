@@ -20,7 +20,6 @@
     </script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center antialiased">
@@ -36,7 +35,7 @@
     <main class="w-full max-w-2xl px-6 mt-10 flex-1 flex flex-col">
         <div class="text-center mb-10 animate-fade-in">
             <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-black">探索云端资源</h1>
-            <p class="text-gray-500">无阻碍、纯净的搜索体验。</p>
+            <p class="text-gray-500">极速搜索</p>
         </div>
 
         <div class="relative group z-20 animate-fade-in">
@@ -59,7 +58,7 @@
     <footer class="w-full py-6 text-center text-gray-400 text-sm mt-auto"><p>Designed for Old Buddy</p></footer>
 
     <script>
-        // 你的后端地址 (不用改，我已经填好了)
+        // 你的 Render 后端地址
         const RENDER_URL = "https://pan-2iav.onrender.com";
 
         const ui = {
@@ -81,26 +80,43 @@
             ui.status.innerHTML = '';
 
             try {
-                // 核心修改：使用 AllOrigins 公共代理绕过 CORS 和 HTTPS 限制
+                // 使用 AllOrigins 代理
                 const target = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
                 const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}&timestamp=${new Date().getTime()}`;
                 
                 const res = await fetch(proxyUrl);
                 if (!res.ok) throw new Error("Network Error");
                 
-                const data = await res.json();
-                renderResults(data);
+                const rawData = await res.json();
+                
+                // --- 解析 JSON 结构 ---
+                let allItems = [];
+                
+                // 1. 检查是否存在 data.merged_by_type
+                if (rawData && rawData.data && rawData.data.merged_by_type) {
+                    const groups = rawData.data.merged_by_type;
+                    
+                    // 2. 遍历所有分类 (aliyun, quark, baidu 等) 并合并成一个大数组
+                    Object.keys(groups).forEach(type => {
+                        const itemsInGroup = groups[type];
+                        if (Array.isArray(itemsInGroup)) {
+                            itemsInGroup.forEach(item => {
+                                // 给每个 item 打上类型标签 (aliyun -> alipan)
+                                item._disk_type = type; 
+                                allItems.push(item);
+                            });
+                        }
+                    });
+                } else if (Array.isArray(rawData.data)) {
+                    // 兼容旧结构
+                    allItems = rawData.data;
+                }
+
+                renderResults(allItems);
 
             } catch (err) {
                 console.error(err);
-                ui.status.innerHTML = `
-                    <div class="text-center py-10 animate-fade-in">
-                        <i class="ph ph-warning-circle text-3xl text-orange-400 mb-2"></i>
-                        <p class="text-gray-600">搜索超时或失败</p>
-                        <p class="text-xs text-gray-400 mt-1">Render 可能正在睡觉，请 30 秒后再试一次。</p>
-                        <button onclick="doSearch()" class="mt-4 text-blue-600 hover:underline">重试</button>
-                    </div>
-                `;
+                ui.status.innerHTML = `<div class="text-center py-10 text-red-500">搜索出错了，请检查 Render 服务状态</div>`;
                 ui.list.innerHTML = '';
             } finally {
                 ui.btn.disabled = false;
@@ -108,34 +124,38 @@
             }
         }
 
-        function renderResults(data) {
+        function renderResults(items) {
             ui.list.innerHTML = '';
-            // 兼容各种乱七八糟的 API 返回格式
-            const items = data.list || data.data || data || [];
 
             if (!items || items.length === 0) {
-                ui.status.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到 🐢</div>`;
+                ui.status.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到捏QwQ</div>`;
                 return;
             }
 
+            ui.status.innerHTML = `<p class="text-sm text-gray-400 mb-4 px-2">找到约 ${items.length} 个结果</p>`;
+
             let html = '';
             items.forEach((item, index) => {
-                const title = item.title || item.name || "未知资源";
-                const link = item.link || item.url || "#";
-                const type = item.disk_type || "云盘";
-                const time = item.time || "";
+                // --字段映射--
+                const title = item.note || item.title || "未知资源"; 
+                const link = item.url || item.link || "#";
+                const typeRaw = item._disk_type || item.source || "cloud";
+                const time = item.datetime ? new Date(item.datetime).toLocaleDateString() : (item.time || "");
 
-                // 简单的颜色逻辑
+                // 优化类型显示
+                let typeLabel = "网盘";
                 let tagClass = "bg-gray-100 text-gray-600";
-                if(title.includes("阿里")) tagClass = "bg-orange-50 text-orange-600";
-                if(title.includes("夸克")) tagClass = "bg-blue-50 text-blue-600";
-                if(title.includes("百度")) tagClass = "bg-red-50 text-red-600";
+                
+                if(typeRaw.includes("ali")) { typeLabel = "阿里云盘"; tagClass = "bg-orange-50 text-orange-600"; }
+                else if(typeRaw.includes("quark")) { typeLabel = "夸克云盘"; tagClass = "bg-blue-50 text-blue-600"; }
+                else if(typeRaw.includes("baidu")) { typeLabel = "百度网盘"; tagClass = "bg-red-50 text-red-600"; }
+                else { typeLabel = typeRaw; }
 
                 html += `
                 <a href="${link}" target="_blank" class="block group animate-fade-in" style="animation-delay: ${index * 0.05}s">
                     <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all">
                         <div class="flex justify-between items-start mb-2">
-                            <span class="px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${type}</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${typeLabel}</span>
                             <span class="text-xs text-gray-400">${time}</span>
                         </div>
                         <h3 class="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
