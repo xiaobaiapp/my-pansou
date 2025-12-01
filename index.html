@@ -18,11 +18,11 @@
             }
         }
     </script>
-    <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-    </style>
+    <style> .no-scrollbar::-webkit-scrollbar { display: none; } </style>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center antialiased">
+
+    <div id="globalError" class="hidden w-full bg-red-600 text-white text-center py-2 text-sm font-bold sticky top-0 z-50"></div>
 
     <nav class="w-full max-w-4xl px-6 py-8 flex justify-between items-center animate-fade-in">
         <div class="flex items-center gap-2">
@@ -35,7 +35,7 @@
     <main class="w-full max-w-2xl px-6 mt-10 flex-1 flex flex-col">
         <div class="text-center mb-10 animate-fade-in">
             <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-black">探索云端资源</h1>
-            <p class="text-gray-500">已启用：智能过滤 + 流畅加载</p>
+            <p class="text-gray-500">智能过滤 · 分页加载 · 极速响应</p>
         </div>
 
         <div class="relative group z-20 animate-fade-in">
@@ -46,19 +46,17 @@
                 class="block w-full pl-12 pr-32 py-5 bg-white border-0 rounded-2xl text-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] focus:ring-2 focus:ring-black/5 outline-none transition-all placeholder-gray-400 z-10 relative" 
                 placeholder="搜索电影、书籍、软件..." 
                 autofocus>
-            <button id="searchBtn" class="absolute right-2 top-2 bottom-2 bg-black text-white px-6 rounded-xl font-medium text-sm hover:bg-gray-800 active:scale-95 transition-all flex items-center gap-2 cursor-pointer z-50">
+            <button id="searchBtn" type="button" class="absolute right-2 top-2 bottom-2 bg-black text-white px-6 rounded-xl font-medium text-sm hover:bg-gray-800 active:scale-95 transition-all flex items-center gap-2 cursor-pointer z-50 select-none">
                 <span>搜索</span><i class="ph ph-arrow-right"></i>
             </button>
         </div>
-
-        <div id="debugArea" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-mono break-all"></div>
 
         <div id="statusArea" class="mt-8"></div>
         <div id="resultsList" class="space-y-4 pb-10"></div>
         
         <div id="loadMoreArea" class="hidden pb-20 text-center">
-            <button id="loadMoreBtn" class="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-black transition-colors shadow-sm text-sm font-medium">
-                加载更多资源
+            <button id="loadMoreBtn" class="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors shadow-sm text-sm font-medium">
+                加载更多
             </button>
         </div>
     </main>
@@ -66,28 +64,47 @@
     <footer class="w-full py-6 text-center text-gray-400 text-sm mt-auto"><p>Designed for Old Buddy</p></footer>
 
     <script>
+        // --- 1. 全局错误监听 (如果代码崩了，这里会报警) ---
+        window.onerror = function(msg, url, line, col, error) {
+            const div = document.getElementById('globalError');
+            div.classList.remove('hidden');
+            div.innerText = `💥 程序出错了: ${msg} (第${line}行)`;
+            console.error(error);
+            return false;
+        };
+
+        // --- 2. 主逻辑 ---
         document.addEventListener('DOMContentLoaded', () => {
             const RENDER_URL = "https://pan-2iav.onrender.com";
             
-            // 全局变量，存数据用
-            let GLOBAL_ITEMS = [];     // 所有的原始数据 (8000条)
-            let FILTERED_ITEMS = [];   // 过滤后的数据 (比如只剩3000条)
-            let CURRENT_PAGE = 0;      // 当前看到第几页
-            const PAGE_SIZE = 20;      // 每次只渲染 20 条，保证不卡！
+            // 状态变量
+            let GLOBAL_ITEMS = [];
+            let FILTERED_ITEMS = [];
+            let CURRENT_PAGE = 0;
+            const PAGE_SIZE = 20;
 
+            // UI 元素
             const ui = {
                 input: document.getElementById('searchInput'),
                 btn: document.getElementById('searchBtn'),
                 list: document.getElementById('resultsList'),
                 status: document.getElementById('statusArea'),
-                debug: document.getElementById('debugArea'),
                 loadMoreArea: document.getElementById('loadMoreArea'),
                 loadMoreBtn: document.getElementById('loadMoreBtn')
             };
 
-            ui.btn.addEventListener('click', doSearch);
-            ui.loadMoreBtn.addEventListener('click', renderNextPage);
-            ui.input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch(); });
+            // 绑定事件 (加了 try-catch 保证点击不报错)
+            ui.btn.onclick = function() { safeDoSearch(); };
+            ui.loadMoreBtn.onclick = function() { renderNextPage(); };
+            ui.input.onkeypress = function(e) { if (e.key === 'Enter') safeDoSearch(); };
+
+            async function safeDoSearch() {
+                try {
+                    await doSearch();
+                } catch (e) {
+                    alert("搜索触发失败: " + e.message);
+                }
+            }
 
             async function doSearch() {
                 const query = ui.input.value.trim();
@@ -97,12 +114,13 @@
                     return;
                 }
 
-                // 重置所有状态
+                console.log("🚀 开始搜索:", query);
+
+                // UI 立即反馈
                 ui.btn.disabled = true;
                 ui.btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i>`;
                 ui.list.innerHTML = `<div class="animate-pulse space-y-4">${[1,2,3].map(()=>`<div class="bg-white p-5 rounded-2xl border border-gray-100 h-24"></div>`).join('')}</div>`;
                 ui.status.innerHTML = '';
-                ui.debug.classList.add('hidden');
                 ui.loadMoreArea.classList.add('hidden');
                 
                 GLOBAL_ITEMS = [];
@@ -110,19 +128,20 @@
                 CURRENT_PAGE = 0;
 
                 try {
-                    // 1. URL 编码优化，防止中文乱码导致搜出乱七八糟的东西
+                    // 构建 URL (最原始的拼接，防止编码问题)
                     const targetUrl = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
-                    // 2. 对整个 targetUrl 再做一次编码，确保 corsproxy 正确透传参数
-                    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-
-                    console.log("Requesting:", proxyUrl);
+                    // 代理地址
+                    const proxyUrl = `https://corsproxy.io/?${targetUrl}`;
+                    
+                    console.log("🌐 请求地址:", proxyUrl);
 
                     const res = await fetch(proxyUrl);
-                    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                    if (!res.ok) throw new Error(`网络错误: ${res.status}`);
                     
                     const rawData = await res.json();
+                    console.log("📦 收到数据:", rawData);
 
-                    // --- 数据解析与合并 ---
+                    // 数据清洗
                     let allItems = [];
                     if (rawData && rawData.data && rawData.data.merged_by_type) {
                         const groups = rawData.data.merged_by_type;
@@ -140,33 +159,27 @@
 
                     GLOBAL_ITEMS = allItems;
                     
-                    // --- 核心优化：前端强力过滤 ---
-                    // 如果标题里不包含搜索关键词，直接扔掉！(解决“乱七八糟”的问题)
-                    // 使用 toLowerCase() 忽略大小写
+                    // 过滤逻辑 (容错处理)
                     const lowerQuery = query.toLowerCase();
                     FILTERED_ITEMS = GLOBAL_ITEMS.filter(item => {
-                        const title = (item.note || item.title || "").toLowerCase();
-                        // 稍微放宽一点：只要包含关键词的一部分就行，或者不过滤（如果你怕漏掉的话）
-                        // 这里开启严格模式：必须包含关键词
-                        return title.includes(lowerQuery);
+                        const t = (item.note || item.title || "").toLowerCase();
+                        // 只要标题有效就进行过滤
+                        return t && t.includes(lowerQuery);
                     });
 
-                    // 如果过滤太狠导致没数据了，就回退到显示所有数据
+                    // 如果过滤后没数据，但原数据有，则提示
                     if (FILTERED_ITEMS.length === 0 && GLOBAL_ITEMS.length > 0) {
-                        FILTERED_ITEMS = GLOBAL_ITEMS;
-                        ui.status.innerHTML = `<p class="text-sm text-orange-500 mb-4 px-2">⚠️ 未找到完全匹配 "${query}" 的资源，显示相关结果：</p>`;
+                        ui.status.innerHTML = `<p class="text-sm text-orange-500 mb-4 px-2">⚠️ 已过滤掉 ${GLOBAL_ITEMS.length} 条不匹配标题的广告资源。</p>`;
+                    } else if (FILTERED_ITEMS.length > 0) {
+                        ui.status.innerHTML = `<p class="text-sm text-gray-400 mb-4 px-2">找到 ${FILTERED_ITEMS.length} 个结果</p>`;
+                        renderNextPage();
                     } else {
-                        ui.status.innerHTML = `<p class="text-sm text-gray-400 mb-4 px-2">找到 ${FILTERED_ITEMS.length} 个相关资源 (已过滤 ${GLOBAL_ITEMS.length - FILTERED_ITEMS.length} 条无关广告)</p>`;
+                         ui.list.innerHTML = `<div class="text-center py-10 text-gray-500">没搜到相关资源 🐢</div>`;
                     }
-
-                    // 渲染第一页
-                    renderNextPage();
 
                 } catch (err) {
                     console.error(err);
-                    ui.debug.classList.remove('hidden');
-                    ui.debug.innerHTML = `❌ 错误: ${err.message}<br>可能是网络超时，请再试一次。`;
-                    ui.list.innerHTML = '';
+                    ui.list.innerHTML = `<div class="text-center py-10 text-red-500">❌ 出错了: ${err.message}<br><span class="text-xs text-gray-400">请检查网络或稍后再试</span></div>`;
                 } finally {
                     ui.btn.disabled = false;
                     ui.btn.innerHTML = `<span>搜索</span><i class="ph ph-arrow-right"></i>`;
@@ -178,12 +191,7 @@
                 const end = start + PAGE_SIZE;
                 const pageItems = FILTERED_ITEMS.slice(start, end);
 
-                if (pageItems.length === 0 && CURRENT_PAGE === 0) {
-                    ui.list.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到 🐢</div>`;
-                    return;
-                }
-
-                if (CURRENT_PAGE === 0) ui.list.innerHTML = ''; // 第一页清空列表
+                if (CURRENT_PAGE === 0) ui.list.innerHTML = '';
 
                 let html = '';
                 pageItems.forEach((item, index) => {
@@ -193,15 +201,14 @@
                     const timeRaw = item.datetime || item.time || "";
                     
                     let time = timeRaw;
-                    if(timeRaw.includes('T')) try { time = new Date(timeRaw).toLocaleDateString(); } catch(e){}
+                    if(timeRaw && timeRaw.includes('T')) try { time = new Date(timeRaw).toLocaleDateString(); } catch(e){}
 
-                    let typeLabel = typeRaw;
+                    let typeLabel = "网盘";
                     let tagClass = "bg-gray-100 text-gray-600";
-                    if(typeRaw.includes("ali")) { typeLabel = "阿里云盘"; tagClass = "bg-orange-50 text-orange-600"; }
-                    else if(typeRaw.includes("quark")) { typeLabel = "夸克云盘"; tagClass = "bg-blue-50 text-blue-600"; }
-                    else if(typeRaw.includes("baidu")) { typeLabel = "百度网盘"; tagClass = "bg-red-50 text-red-600"; }
+                    if(typeRaw.includes("ali")) { typeLabel = "阿里云"; tagClass = "bg-orange-50 text-orange-600"; }
+                    else if(typeRaw.includes("quark")) { typeLabel = "夸克"; tagClass = "bg-blue-50 text-blue-600"; }
+                    else if(typeRaw.includes("baidu")) { typeLabel = "百度"; tagClass = "bg-red-50 text-red-600"; }
 
-                    // 延迟动画，让新加载的也动起来
                     html += `
                     <a href="${link}" target="_blank" class="block group animate-fade-in" style="animation-delay: ${index * 0.05}s">
                         <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all">
@@ -216,13 +223,9 @@
                     </a>`;
                 });
 
-                // 追加到列表中，而不是覆盖
                 ui.list.insertAdjacentHTML('beforeend', html);
-
-                // 更新页码
                 CURRENT_PAGE++;
 
-                // 判断是否还有更多数据
                 if (end < FILTERED_ITEMS.length) {
                     ui.loadMoreArea.classList.remove('hidden');
                     ui.loadMoreBtn.innerText = `加载更多 (${FILTERED_ITEMS.length - end}剩余)`;
@@ -231,4 +234,6 @@
                 }
             }
         });
-    </
+    </script>
+</body>
+</html>
