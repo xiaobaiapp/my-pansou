@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pansou / 极简搜</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>极简搜</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -22,17 +22,19 @@
         }
     </script>
     <style>
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 20px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background-color: #d1d5db; }
+        /* 修复iOS滚动回弹 */
+        body { -webkit-overflow-scrolling: touch; }
     </style>
 </head>
-<body class="bg-[#f8f9fa] text-gray-800 h-screen flex flex-col items-center antialiased overflow-hidden">
+<body class="bg-[#f8f9fa] text-gray-800 h-[100dvh] w-full flex flex-col items-center antialiased overflow-hidden">
 
     <div id="globalError" class="hidden w-full bg-red-500 text-white text-center py-1 text-xs font-bold absolute top-0 z-[60]"></div>
 
-    <nav class="w-full max-w-3xl px-6 py-6 flex justify-between items-center z-10">
+    <nav class="w-full max-w-3xl px-6 py-4 md:py-6 flex justify-between items-center z-10 shrink-0">
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-lg">P</div>
             <span class="font-semibold text-lg tracking-tight">Pansou</span>
@@ -40,11 +42,11 @@
         <a href="https://github.com/fish2018/pansou" target="_blank" class="text-gray-400 hover:text-black transition-colors"><i class="ph ph-github-logo text-2xl"></i></a>
     </nav>
 
-    <main class="w-full max-w-3xl px-4 md:px-6 flex-1 flex flex-col h-full pb-4">
+    <main class="w-full max-w-3xl px-4 md:px-6 flex-1 flex flex-col h-full pb-0 md:pb-4 overflow-hidden">
         
-        <div class="text-center mb-6 animate-fade-in shrink-0">
-            <h1 class="text-3xl font-bold mb-2 tracking-tight text-black">探索云端资源</h1>
-            <p class="text-gray-400 text-sm">全网盘 · 磁力 · 迅雷 · 115 · 123</p>
+        <div class="text-center mb-4 md:mb-6 animate-fade-in shrink-0">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 tracking-tight text-black">探索云端资源</h1>
+            <p class="text-gray-400 text-xs md:text-sm">全网盘 · 磁力 · 迅雷 · 天翼 · 115</p>
         </div>
 
         <div class="relative group z-20 shrink-0 mb-4 animate-fade-in">
@@ -52,15 +54,15 @@
                 <i class="ph ph-magnifying-glass text-gray-400 text-xl"></i>
             </div>
             <input type="text" id="searchInput" 
-                class="block w-full pl-11 pr-32 py-4 bg-white border border-gray-100 rounded-2xl text-lg shadow-[0_4px_20px_rgb(0,0,0,0.03)] focus:ring-2 focus:ring-black/5 outline-none transition-all placeholder-gray-400 z-10 relative" 
-                placeholder="搜索资源..." 
+                class="block w-full pl-11 pr-32 py-3 md:py-4 bg-white border border-gray-100 rounded-2xl text-base md:text-lg shadow-[0_4px_20px_rgb(0,0,0,0.03)] focus:ring-2 focus:ring-black/5 outline-none transition-all placeholder-gray-400 z-10 relative appearance-none" 
+                placeholder="搜你所想..." 
                 autofocus>
-            <button id="searchBtn" type="button" class="absolute right-2 top-2 bottom-2 bg-black text-white px-5 rounded-xl font-medium text-sm hover:bg-gray-800 hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:scale-100 disabled:cursor-not-allowed transition-all flex items-center gap-2 cursor-pointer z-50 select-none">
+            <button id="searchBtn" type="button" class="absolute right-1.5 top-1.5 bottom-1.5 bg-black text-white px-4 md:px-5 rounded-xl font-medium text-sm hover:bg-gray-800 hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:scale-100 disabled:cursor-not-allowed transition-all flex items-center gap-2 cursor-pointer z-50 select-none">
                 <span>搜索</span><i class="ph ph-arrow-right"></i>
             </button>
         </div>
 
-        <div id="resultContainer" class="hidden flex-1 bg-white rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden flex flex-col animate-slide-up relative mb-6">
+        <div id="resultContainer" class="hidden flex-1 bg-white md:rounded-3xl rounded-t-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden flex flex-col animate-slide-up relative mb-0 md:mb-6">
             
             <div class="px-5 py-3 border-b border-gray-50 flex justify-between items-center bg-white z-10 shrink-0">
                 <div id="statusText" class="text-sm font-medium text-gray-500 flex items-center gap-2">
@@ -72,15 +74,15 @@
             <div id="scrollArea" class="flex-1 overflow-y-auto custom-scroll p-4 relative">
                 <div id="resultsList" class="space-y-3 pb-4"></div>
                 
-                <div id="loadMoreArea" class="hidden py-4 text-center">
-                    <button id="loadMoreBtn" class="px-5 py-2.5 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 hover:text-black transition-colors text-sm font-medium w-full md:w-auto">
+                <div id="loadMoreArea" class="hidden py-6 text-center mb-10 md:mb-0">
+                    <button id="loadMoreBtn" class="px-5 py-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 hover:text-black transition-colors text-sm font-medium w-full md:w-auto shadow-sm active:scale-95">
                         加载更多 (10条)
                     </button>
                 </div>
 
-                <div id="emptyState" class="hidden h-full flex flex-col items-center justify-center text-gray-400">
+                <div id="emptyState" class="hidden h-full flex flex-col items-center justify-center text-gray-400 pb-20">
                     <i class="ph ph-ghost text-4xl mb-2 text-gray-200"></i>
-                    <p class="text-sm">什么也没找到</p>
+                    <p class="text-sm">什么也没找到QwQ</p>
                 </div>
             </div>
         </div>
@@ -92,9 +94,8 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             
-            // --- 🔐 地址伪装 ---
-            const _part1 = "aHR0cHM6Ly9wYW4tMmlhdg=="; // Base64: https://pan-2iav
-            const _part2 = "Lm9ucmVuZGVyLmNvbQ==";     // Base64: .onrender.com
+            const _part1 = "aHR0cHM6Ly9wYW4tMmlhdg==";
+            const _part2 = "Lm9ucmVuZGVyLmNvbQ==";    
             const getEndpoint = () => atob(_part1) + atob(_part2);
 
             let GLOBAL_ITEMS = [];
@@ -126,9 +127,7 @@
                 ui.empty.classList.add('hidden');
                 ui.loadArea.classList.add('hidden');
                 
-                // --- 修复按钮塌陷问题 ---
                 ui.btn.disabled = true;
-                // 保留文字，防止按钮变小
                 ui.btn.innerHTML = `<span>ing...</span><i class="ph ph-spinner animate-spin"></i>`;
                 
                 ui.list.innerHTML = `<div class="animate-pulse space-y-3">${[1,2,3,4,5].map(()=>`<div class="bg-gray-50 h-20 rounded-xl"></div>`).join('')}</div>`;
@@ -181,7 +180,6 @@
                     ui.empty.classList.remove('hidden');
                 } finally {
                     ui.btn.disabled = false;
-                    // 恢复按钮原样
                     ui.btn.innerHTML = `<span>搜索</span><i class="ph ph-arrow-right"></i>`;
                 }
             }
@@ -216,35 +214,47 @@
                         typeLabel = "迅雷"; typeIcon = "ph-lightning"; colorClass = "bg-sky-50 text-sky-600";
                     }
                     
-                    // --- 2. 域名识别 ---
+                    // --- 2. 网盘识别 ---
+                    
+                    // 天翼云盘 (189) - 新增
+                    else if (linkLower.includes("cloud.189.cn") || titleLower.includes("天翼") || titleLower.includes("189")) {
+                        typeLabel = "天翼云盘"; typeIcon = "ph-cloud-sun"; colorClass = "bg-teal-50 text-teal-600"; // Teal
+                    }
+                    
+                    // 123全家桶
                     else if (
-                        linkLower.includes("123pan") || 
-                        linkLower.includes("123684") || 
-                        linkLower.includes("123912") || 
-                        linkLower.includes("123865") || 
+                        linkLower.includes("123pan") || linkLower.includes("123684") || 
+                        linkLower.includes("123912") || linkLower.includes("123865") || 
                         titleLower.includes("123")
                     ) {
                         typeLabel = "123云盘"; typeIcon = "ph-hard-drives"; colorClass = "bg-emerald-50 text-emerald-600";
                     }
+                    // 139
                     else if (linkLower.includes("139.com") || titleLower.includes("移动云盘") || titleLower.includes("139")) {
                         typeLabel = "移动云盘"; typeIcon = "ph-device-mobile"; colorClass = "bg-pink-50 text-pink-600";
                     }
+                    // 115
                     else if (linkLower.includes("115.com") || linkLower.includes("115cdn.com") || titleLower.includes("115")) {
                         typeLabel = "115"; typeIcon = "ph-folder-lock"; colorClass = "bg-indigo-50 text-indigo-600";
                     }
+                    // UC
                     else if (linkLower.includes("uc.cn") || titleLower.includes("uc")) {
                         typeLabel = "UC网盘"; typeIcon = "ph-planet"; colorClass = "bg-amber-50 text-amber-600";
                     }
+                    // Quark
                     else if (linkLower.includes("quark") || titleLower.includes("夸克")) {
                         typeLabel = "夸克"; typeIcon = "ph-atom"; colorClass = "bg-blue-50 text-blue-600";
                     }
+                    // Ali
                     else if (linkLower.includes("ali") || titleLower.includes("阿里")) {
                         typeLabel = "阿里云"; typeIcon = "ph-cloud-arrow-up"; colorClass = "bg-orange-50 text-orange-600";
                     }
+                    // Baidu
                     else if (linkLower.includes("baidu") || titleLower.includes("百度")) {
                         typeLabel = "百度"; typeIcon = "ph-hard-drives"; colorClass = "bg-red-50 text-red-600";
                     }
 
+                    // --- 时间处理 ---
                     let displayTime = "";
                     if(timeRaw && timeRaw.length > 5 && !timeRaw.startsWith("0001")) {
                         try {
@@ -284,7 +294,7 @@
                     ui.loadArea.classList.remove('hidden');
                 } else {
                     ui.loadArea.classList.add('hidden');
-                    if(CURRENT_PAGE > 1) ui.list.insertAdjacentHTML('beforeend', `<div class="text-center text-xs text-gray-300 py-4">-- 到底了 --</div>`);
+                    if(CURRENT_PAGE > 1) ui.list.insertAdjacentHTML('beforeend', `<div class="text-center text-xs text-gray-300 py-6 mb-10">-- 到底了 --</div>`);
                 }
             }
         });
