@@ -4,15 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pansou / 极简搜</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
     <script>
         tailwind.config = {
             theme: {
@@ -25,62 +19,49 @@
         }
     </script>
     <style>
-        /* 隐藏滚动条但保留功能 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center antialiased selection:bg-black selection:text-white">
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center antialiased">
 
     <nav class="w-full max-w-4xl px-6 py-8 flex justify-between items-center animate-fade-in">
         <div class="flex items-center gap-2">
             <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-lg">P</div>
             <span class="font-semibold text-lg tracking-tight">Pansou</span>
         </div>
-        <a href="https://github.com/fish2018/pansou" target="_blank" class="text-gray-400 hover:text-black transition-colors">
-            <i class="ph ph-github-logo text-2xl"></i>
-        </a>
+        <a href="https://github.com/fish2018/pansou" target="_blank" class="text-gray-400 hover:text-black transition-colors"><i class="ph ph-github-logo text-2xl"></i></a>
     </nav>
 
     <main class="w-full max-w-2xl px-6 mt-10 flex-1 flex flex-col">
-        
         <div class="text-center mb-10 animate-fade-in">
             <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-black">探索云端资源</h1>
-            <p class="text-gray-500">极简、纯净、无广告的网盘搜索体验。</p>
+            <p class="text-gray-500">无阻碍、纯净的搜索体验。</p>
         </div>
 
-        <div class="relative group z-20 animate-fade-in" style="animation-delay: 0.1s;">
+        <div class="relative group z-20 animate-fade-in">
             <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                <i class="ph ph-magnifying-glass text-gray-400 text-xl group-focus-within:text-black transition-colors"></i>
+                <i class="ph ph-magnifying-glass text-gray-400 text-xl"></i>
             </div>
             <input type="text" id="searchInput" 
-                class="block w-full pl-12 pr-4 py-5 bg-white border-0 rounded-2xl text-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] focus:ring-2 focus:ring-black/5 focus:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all placeholder-gray-400" 
+                class="block w-full pl-12 pr-4 py-5 bg-white border-0 rounded-2xl text-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] focus:ring-2 focus:ring-black/5 outline-none transition-all placeholder-gray-400" 
                 placeholder="搜索电影、书籍、软件..." 
-                onkeypress="handleEnter(event)"
-                autofocus
-            >
-            <button onclick="doSearch()" id="searchBtn" class="absolute right-3 top-3 bottom-3 bg-black text-white px-6 rounded-xl font-medium text-sm hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
-                <span>搜索</span>
-                <i class="ph ph-arrow-right"></i>
+                onkeypress="handleEnter(event)" autofocus>
+            <button onclick="doSearch()" id="searchBtn" class="absolute right-3 top-3 bottom-3 bg-black text-white px-6 rounded-xl font-medium text-sm hover:bg-gray-800 transition-all flex items-center gap-2">
+                <span>搜索</span><i class="ph ph-arrow-right"></i>
             </button>
         </div>
 
         <div id="statusArea" class="mt-8"></div>
-
-        <div id="resultsList" class="space-y-4 pb-20">
-            </div>
+        <div id="resultsList" class="space-y-4 pb-20"></div>
     </main>
 
-    <footer class="w-full py-6 text-center text-gray-400 text-sm mt-auto">
-        <p>Powered by Render & Vercel · Designed for Old Buddy</p>
-    </footer>
+    <footer class="w-full py-6 text-center text-gray-400 text-sm mt-auto"><p>Designed for Old Buddy</p></footer>
 
     <script>
-        // 配置你的 API 地址
-        const API_BASE = "";
+        // 你的后端地址 (不用改，我已经填好了)
+        const RENDER_URL = "https://pan-2iav.onrender.com";
 
-        // 状态管理简单的替代品
         const ui = {
             input: document.getElementById('searchInput'),
             btn: document.getElementById('searchBtn'),
@@ -88,53 +69,36 @@
             status: document.getElementById('statusArea'),
         };
 
-        // 骨架屏模板
-        const skeletonHTML = `
-            <div class="animate-pulse space-y-4">
-                ${[1,2,3].map(() => `
-                <div class="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col gap-3">
-                    <div class="h-5 bg-gray-200 rounded w-3/4"></div>
-                    <div class="flex justify-between items-center">
-                        <div class="h-4 bg-gray-100 rounded w-1/4"></div>
-                        <div class="h-8 bg-gray-100 rounded-lg w-20"></div>
-                    </div>
-                </div>`).join('')}
-            </div>
-        `;
+        const skeletonHTML = `<div class="animate-pulse space-y-4">${[1,2,3].map(()=>`<div class="bg-white p-5 rounded-2xl border border-gray-100 h-24"></div>`).join('')}</div>`;
 
         async function doSearch() {
             const query = ui.input.value.trim();
-            if (!query) {
-                ui.input.focus();
-                ui.input.classList.add('ring-2', 'ring-red-500/50');
-                setTimeout(() => ui.input.classList.remove('ring-2', 'ring-red-500/50'), 500);
-                return;
-            }
+            if (!query) return;
 
-            // UI Loading 状态
             ui.btn.disabled = true;
             ui.btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i>`;
             ui.list.innerHTML = skeletonHTML;
             ui.status.innerHTML = '';
 
             try {
-                // 请求 API
-                const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
-                if (!res.ok) throw new Error("API Network Error");
-                const data = await res.json();
+                // 核心修改：使用 AllOrigins 公共代理绕过 CORS 和 HTTPS 限制
+                const target = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}&timestamp=${new Date().getTime()}`;
                 
-                // 渲染数据
+                const res = await fetch(proxyUrl);
+                if (!res.ok) throw new Error("Network Error");
+                
+                const data = await res.json();
                 renderResults(data);
+
             } catch (err) {
                 console.error(err);
                 ui.status.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-10 text-center animate-fade-in">
-                        <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-                            <i class="ph ph-cloud-slash text-2xl text-red-500"></i>
-                        </div>
-                        <h3 class="text-lg font-medium text-gray-900">连接超时</h3>
-                        <p class="text-gray-500 text-sm mt-1 max-w-xs">Render 免费实例可能正在唤醒中，请耐心等待 30 秒后再次点击搜索。</p>
-                        <button onclick="doSearch()" class="mt-4 text-blue-600 hover:text-blue-800 text-sm font-medium">重试一次</button>
+                    <div class="text-center py-10 animate-fade-in">
+                        <i class="ph ph-warning-circle text-3xl text-orange-400 mb-2"></i>
+                        <p class="text-gray-600">搜索超时或失败</p>
+                        <p class="text-xs text-gray-400 mt-1">Render 可能正在睡觉，请 30 秒后再试一次。</p>
+                        <button onclick="doSearch()" class="mt-4 text-blue-600 hover:underline">重试</button>
                     </div>
                 `;
                 ui.list.innerHTML = '';
@@ -146,70 +110,44 @@
 
         function renderResults(data) {
             ui.list.innerHTML = '';
-            const items = data.list || data.data || [];
+            // 兼容各种乱七八糟的 API 返回格式
+            const items = data.list || data.data || data || [];
 
             if (!items || items.length === 0) {
-                ui.status.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-10 text-center animate-fade-in">
-                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                            <i class="ph ph-ghost text-2xl text-gray-400"></i>
-                        </div>
-                        <p class="text-gray-500">找不到与 "${ui.input.value}" 相关的资源</p>
-                    </div>
-                `;
+                ui.status.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到 🐢</div>`;
                 return;
             }
 
-            // 成功展示
-            ui.status.innerHTML = `<p class="text-sm text-gray-400 mb-4 px-2">找到约 ${items.length} 个结果</p>`;
-            
-            // 延迟一点点渲染列表以展示动画
             let html = '';
             items.forEach((item, index) => {
                 const title = item.title || item.name || "未知资源";
                 const link = item.link || item.url || "#";
-                const type = item.disk_type || "Cloud";
+                const type = item.disk_type || "云盘";
                 const time = item.time || "";
-                const user = item.user || "未知分享者";
 
-                // 判断网盘类型给不同颜色 tag
-                let tagColor = "bg-gray-100 text-gray-600";
-                if(title.includes("阿里") || type.includes("阿里")) tagColor = "bg-orange-50 text-orange-600";
-                if(title.includes("夸克") || type.includes("夸克")) tagColor = "bg-blue-50 text-blue-600";
-                if(title.includes("百度") || type.includes("百度")) tagColor = "bg-red-50 text-red-600";
+                // 简单的颜色逻辑
+                let tagClass = "bg-gray-100 text-gray-600";
+                if(title.includes("阿里")) tagClass = "bg-orange-50 text-orange-600";
+                if(title.includes("夸克")) tagClass = "bg-blue-50 text-blue-600";
+                if(title.includes("百度")) tagClass = "bg-red-50 text-red-600";
 
                 html += `
                 <a href="${link}" target="_blank" class="block group animate-fade-in" style="animation-delay: ${index * 0.05}s">
-                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-200 relative overflow-hidden">
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all">
                         <div class="flex justify-between items-start mb-2">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${tagColor}">
-                                ${type}
-                            </span>
-                            <span class="text-xs text-gray-400 flex items-center gap-1">
-                                <i class="ph ph-clock"></i> ${time || '近期'}
-                            </span>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${type}</span>
+                            <span class="text-xs text-gray-400">${time}</span>
                         </div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2 leading-relaxed">
+                        <h3 class="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
                             ${title.replace(/<[^>]+>/g, '')}
                         </h3>
-                        <div class="flex items-center justify-between mt-3">
-                            <span class="text-xs text-gray-400 flex items-center gap-1">
-                                <i class="ph ph-user"></i> ${user}
-                            </span>
-                            <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-black group-hover:text-white transition-all transform group-hover:-rotate-45">
-                                <i class="ph ph-arrow-right"></i>
-                            </div>
-                        </div>
                     </div>
-                </a>
-                `;
+                </a>`;
             });
             ui.list.innerHTML = html;
         }
 
-        function handleEnter(e) {
-            if (e.key === 'Enter') doSearch();
-        }
+        function handleEnter(e) { if (e.key === 'Enter') doSearch(); }
     </script>
 </body>
 </html>
