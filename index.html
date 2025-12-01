@@ -80,7 +80,7 @@
 
                 <div id="emptyState" class="hidden h-full flex flex-col items-center justify-center text-gray-400">
                     <i class="ph ph-ghost text-4xl mb-2 text-gray-200"></i>
-                    <p class="text-sm">什么也没找到</p>
+                    <p class="text-sm">什么也没找到QwQ</p>
                 </div>
             </div>
         </div>
@@ -156,7 +156,7 @@
                     });
 
                     if (FILTERED_ITEMS.length > 0) {
-                        ui.status.innerHTML = `<span class="text-green-600">✅ 找到 ${FILTERED_ITEMS.length} 个资源</span>`;
+                        ui.status.innerHTML = `<span class="text-green-600">共找到 ${FILTERED_ITEMS.length} 个资源</span>`;
                         CURRENT_PAGE = 0;
                         ui.list.innerHTML = '';
                         renderNextPage();
@@ -186,7 +186,7 @@
                     const titleRaw = item.note || item.title || "未知资源"; 
                     const link = item.url || item.link || "#";
                     let typeRaw = (item._disk_type || item.source || "").toLowerCase();
-                    const timeRaw = item.datetime || item.time || "";
+                    let timeRaw = item.datetime || item.time || "";
 
                     const linkLower = link.toLowerCase();
                     const titleLower = titleRaw.toLowerCase();
@@ -195,71 +195,65 @@
                     let typeIcon = "ph-cloud";
                     let colorClass = "bg-gray-100 text-gray-600";
 
-                    // --- 1. 协议类 (磁力/电驴/迅雷) ---
+                    // --- 识别逻辑更新 ---
+                    
+                    // 1. 协议类
                     if (linkLower.startsWith("magnet") || titleLower.includes("magnet")) {
-                        typeLabel = "磁力";
-                        typeIcon = "ph-magnet";
-                        colorClass = "bg-purple-50 text-purple-600";
+                        typeLabel = "磁力"; typeIcon = "ph-magnet"; colorClass = "bg-purple-50 text-purple-600";
                     } 
                     else if (linkLower.startsWith("ed2k") || titleLower.includes("ed2k")) {
-                        typeLabel = "电驴";
-                        typeIcon = "ph-share-network";
-                        colorClass = "bg-purple-50 text-purple-600";
+                        typeLabel = "电驴"; typeIcon = "ph-share-network"; colorClass = "bg-purple-50 text-purple-600";
                     } 
-                    // 迅雷 (改为了淡蓝色 Sky)
                     else if (linkLower.startsWith("thunder") || titleLower.includes("迅雷") || linkLower.includes("xunlei")) {
-                        typeLabel = "迅雷";
-                        typeIcon = "ph-lightning";
-                        colorClass = "bg-sky-50 text-sky-600"; 
+                        typeLabel = "迅雷"; typeIcon = "ph-lightning"; colorClass = "bg-sky-50 text-sky-600";
                     }
                     
-                    // --- 2. 网盘域名识别 (139/123/115/UC/Quark/Ali/Baidu) ---
+                    // 2. 域名识别 (123/139/115/UC/Quark/Ali/Baidu)
                     
-                    // 139 移动云盘 (新增)
+                    // 123 (添加了 123684.com)
+                    else if (linkLower.includes("123pan") || linkLower.includes("123684.com") || titleLower.includes("123")) {
+                        typeLabel = "123云盘"; typeIcon = "ph-hard-drives"; colorClass = "bg-emerald-50 text-emerald-600";
+                    }
+                    // 139
                     else if (linkLower.includes("139.com") || titleLower.includes("移动云盘") || titleLower.includes("139")) {
-                        typeLabel = "移动云盘";
-                        typeIcon = "ph-device-mobile";
-                        colorClass = "bg-pink-50 text-pink-600"; // Rose/Pink
+                        typeLabel = "移动云盘"; typeIcon = "ph-device-mobile"; colorClass = "bg-pink-50 text-pink-600";
                     }
-                    // 123 云盘 (新增)
-                    else if (linkLower.includes("123pan") || titleLower.includes("123")) {
-                        typeLabel = "123云盘";
-                        typeIcon = "ph-hard-drives";
-                        colorClass = "bg-emerald-50 text-emerald-600"; // Emerald Green
+                    // 115 (添加了 115cdn.com)
+                    else if (linkLower.includes("115.com") || linkLower.includes("115cdn.com") || titleLower.includes("115")) {
+                        typeLabel = "115"; typeIcon = "ph-folder-lock"; colorClass = "bg-indigo-50 text-indigo-600";
                     }
-                    // 115 网盘
-                    else if (linkLower.includes("115.com") || titleLower.includes("115")) {
-                        typeLabel = "115";
-                        typeIcon = "ph-folder-lock";
-                        colorClass = "bg-indigo-50 text-indigo-600";
-                    }
-                    // UC 网盘
+                    // UC
                     else if (linkLower.includes("uc.cn") || titleLower.includes("uc")) {
-                        typeLabel = "UC网盘";
-                        typeIcon = "ph-planet";
-                        colorClass = "bg-amber-50 text-amber-600";
+                        typeLabel = "UC网盘"; typeIcon = "ph-planet"; colorClass = "bg-amber-50 text-amber-600";
                     }
-                    // 夸克
+                    // Quark
                     else if (linkLower.includes("quark") || titleLower.includes("夸克")) {
-                        typeLabel = "夸克";
-                        typeIcon = "ph-atom";
-                        colorClass = "bg-blue-50 text-blue-600";
+                        typeLabel = "夸克"; typeIcon = "ph-atom"; colorClass = "bg-blue-50 text-blue-600";
                     }
-                    // 阿里
+                    // Ali
                     else if (linkLower.includes("ali") || titleLower.includes("阿里")) {
-                        typeLabel = "阿里云";
-                        typeIcon = "ph-cloud-arrow-up";
-                        colorClass = "bg-orange-50 text-orange-600";
+                        typeLabel = "阿里云"; typeIcon = "ph-cloud-arrow-up"; colorClass = "bg-orange-50 text-orange-600";
                     }
-                    // 百度
+                    // Baidu
                     else if (linkLower.includes("baidu") || titleLower.includes("百度")) {
-                        typeLabel = "百度";
-                        typeIcon = "ph-hard-drives";
-                        colorClass = "bg-red-50 text-red-600";
+                        typeLabel = "百度"; typeIcon = "ph-hard-drives"; colorClass = "bg-red-50 text-red-600";
                     }
 
-                    let time = timeRaw;
-                    if(time.includes('T')) try{ time = time.split('T')[0]; }catch(e){}
+                    // --- 时间处理逻辑 (修复 0001-01-01) ---
+                    let displayTime = "";
+                    if(timeRaw && timeRaw.length > 5 && !timeRaw.startsWith("0001")) {
+                        try {
+                            // 如果是 ISO 时间 (2025-11-27T...) 截取前半段
+                            if(timeRaw.includes('T')) {
+                                displayTime = timeRaw.split('T')[0];
+                            } else {
+                                displayTime = timeRaw;
+                            }
+                        } catch(e) {}
+                    }
+                    // 如果时间是空的，就直接不显示时间组件，或者显示“未知”
+                    // 这里我们选择：如果有时间显示时间，没时间显示“资源”二字占位，保持排版对齐
+                    let timeHtml = displayTime ? `<span class="text-xs text-gray-400">${displayTime}</span>` : `<span class="text-xs text-gray-300">近期</span>`;
 
                     html += `
                     <a href="${link}" target="_blank" class="block group animate-fade-in">
@@ -269,7 +263,7 @@
                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${colorClass}">
                                         <i class="ph ${typeIcon}"></i> ${typeLabel}
                                     </span>
-                                    <span class="text-xs text-gray-400">${time}</span>
+                                    ${timeHtml}
                                 </div>
                                 <i class="ph ph-arrow-up-right text-gray-300 group-hover:text-blue-500 transition-colors"></i>
                             </div>
