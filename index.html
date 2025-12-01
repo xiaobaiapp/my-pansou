@@ -18,9 +18,6 @@
             }
         }
     </script>
-    <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center antialiased">
 
@@ -35,18 +32,20 @@
     <main class="w-full max-w-2xl px-6 mt-10 flex-1 flex flex-col">
         <div class="text-center mb-10 animate-fade-in">
             <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-black">探索云端资源</h1>
-            <p class="text-gray-500">Render 引擎 · Vercel 加速</p>
+            <p class="text-gray-500">Render 引擎 · Vercel 加速 · 按钮已复活</p>
         </div>
 
         <div class="relative group z-20 animate-fade-in">
-            <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+            <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-30">
                 <i class="ph ph-magnifying-glass text-gray-400 text-xl"></i>
             </div>
+            
             <input type="text" id="searchInput" 
-                class="block w-full pl-12 pr-4 py-5 bg-white border-0 rounded-2xl text-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] focus:ring-2 focus:ring-black/5 outline-none transition-all placeholder-gray-400" 
+                class="block w-full pl-12 pr-32 py-5 bg-white border-0 rounded-2xl text-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] focus:ring-2 focus:ring-black/5 outline-none transition-all placeholder-gray-400 z-10 relative" 
                 placeholder="搜索电影、书籍、软件..." 
-                onkeypress="handleEnter(event)" autofocus>
-            <button onclick="doSearch()" id="searchBtn" class="absolute right-3 top-3 bottom-3 bg-black text-white px-6 rounded-xl font-medium text-sm hover:bg-gray-800 transition-all flex items-center gap-2">
+                autofocus>
+
+            <button id="searchBtn" class="absolute right-2 top-2 bottom-2 bg-black text-white px-6 rounded-xl font-medium text-sm hover:bg-gray-800 active:scale-95 transition-all flex items-center gap-2 cursor-pointer z-50">
                 <span>搜索</span><i class="ph ph-arrow-right"></i>
             </button>
         </div>
@@ -60,122 +59,131 @@
     <footer class="w-full py-6 text-center text-gray-400 text-sm mt-auto"><p>Designed for Old Buddy</p></footer>
 
     <script>
-        // 你的 Render 后端地址 (我反复确认了，就是这个，没错！)
-        const RENDER_URL = "https://pan-2iav.onrender.com";
+        document.addEventListener('DOMContentLoaded', () => {
+            // 你的 Render 后端
+            const RENDER_URL = "https://pan-2iav.onrender.com";
 
-        const ui = {
-            input: document.getElementById('searchInput'),
-            btn: document.getElementById('searchBtn'),
-            list: document.getElementById('resultsList'),
-            status: document.getElementById('statusArea'),
-            debug: document.getElementById('debugArea')
-        };
+            // 获取元素
+            const input = document.getElementById('searchInput');
+            const btn = document.getElementById('searchBtn');
+            const list = document.getElementById('resultsList');
+            const status = document.getElementById('statusArea');
+            const debug = document.getElementById('debugArea');
 
-        const skeletonHTML = `<div class="animate-pulse space-y-4">${[1,2,3].map(()=>`<div class="bg-white p-5 rounded-2xl border border-gray-100 h-24"></div>`).join('')}</div>`;
+            // 骨架屏
+            const skeletonHTML = `<div class="animate-pulse space-y-4">${[1,2,3].map(()=>`<div class="bg-white p-5 rounded-2xl border border-gray-100 h-24"></div>`).join('')}</div>`;
 
-        async function doSearch() {
-            const query = ui.input.value.trim();
-            if (!query) return;
+            // 绑定点击事件 (不用 onclick 了，用 JS 绑定更稳)
+            btn.addEventListener('click', doSearch);
+            
+            // 绑定回车事件
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') doSearch();
+            });
 
-            // 重置状态
-            ui.btn.disabled = true;
-            ui.btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i>`;
-            ui.list.innerHTML = skeletonHTML;
-            ui.status.innerHTML = '';
-            ui.debug.classList.add('hidden');
-            ui.debug.innerHTML = '';
-
-            try {
-                const targetUrl = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
+            async function doSearch() {
+                const query = input.value.trim();
                 
-                // --- 核心修改：切换到 corsproxy.io (目前最稳的代理) ---
-                // 注意：这里不需要 encodeURIComponent(targetUrl)，直接拼接即可
-                const proxyUrl = `https://corsproxy.io/?${targetUrl}`;
-                
-                console.log(`正在请求: ${proxyUrl}`); // 方便你在控制台看
-
-                const res = await fetch(proxyUrl);
-                
-                if (!res.ok) {
-                    throw new Error(`HTTP 错误: ${res.status} ${res.statusText}`);
-                }
-                
-                const rawData = await res.json();
-                console.log("获取到的原始数据:", rawData); // 打印数据
-
-                // --- 解析逻辑 (针对你的嵌套结构) ---
-                let allItems = [];
-                
-                // 1. 优先处理 merged_by_type (你的数据结构)
-                if (rawData && rawData.data && rawData.data.merged_by_type) {
-                    const groups = rawData.data.merged_by_type;
-                    Object.keys(groups).forEach(type => {
-                        const itemsInGroup = groups[type];
-                        if (Array.isArray(itemsInGroup)) {
-                            itemsInGroup.forEach(item => {
-                                item._disk_type = type; // 标记来源
-                                allItems.push(item);
-                            });
-                        }
-                    });
-                } 
-                // 2. 备用处理 (万一结构变了)
-                else if (rawData && Array.isArray(rawData.data)) {
-                    allItems = rawData.data;
-                } else if (Array.isArray(rawData)) {
-                    allItems = rawData;
+                // 如果是空的，晃动一下输入框或者弹窗，证明按钮是活的
+                if (!query) {
+                    input.focus();
+                    input.placeholder = "👉 必须要输入内容才能搜哦！";
+                    return;
                 }
 
-                renderResults(allItems);
+                console.log("按钮被点击了，正在搜索:", query);
 
-            } catch (err) {
-                console.error("搜索失败详情:", err);
-                
-                // 显示具体的错误信息给老伙计看
-                ui.debug.classList.remove('hidden');
-                ui.debug.innerHTML = `
-                    <strong>❌ 出错了:</strong><br>
-                    ${err.message}<br><br>
-                    <strong>可能的原因:</strong><br>
-                    1. Render 服务正在休眠 (请等待 30秒 再试)<br>
-                    2. 代理服务 corsproxy.io 暂时繁忙<br>
-                    3. 网络不通畅
-                `;
+                // UI 状态更新
+                btn.disabled = true;
+                btn.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i>`;
+                list.innerHTML = skeletonHTML;
+                status.innerHTML = '';
+                debug.classList.add('hidden');
 
-                ui.status.innerHTML = `<div class="text-center py-4 text-gray-500">请求失败，请查看上方红色报错</div>`;
-                ui.list.innerHTML = '';
-            } finally {
-                ui.btn.disabled = false;
-                ui.btn.innerHTML = `<span>搜索</span><i class="ph ph-arrow-right"></i>`;
-            }
-        }
+                try {
+                    // 使用 corsproxy.io
+                    const targetUrl = `${RENDER_URL}/api/search?q=${encodeURIComponent(query)}`;
+                    const proxyUrl = `https://corsproxy.io/?${targetUrl}`;
+                    
+                    console.log("Requesting:", proxyUrl);
 
-        function renderResults(items) {
-            ui.list.innerHTML = '';
+                    const res = await fetch(proxyUrl);
+                    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+                    
+                    const rawData = await res.json();
+                    console.log("Data received:", rawData);
 
-            if (!items || items.length === 0) {
-                ui.status.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到 (数据为空) 🐢</div>`;
-                return;
+                    // 解析数据
+                    let allItems = [];
+                    if (rawData && rawData.data && rawData.data.merged_by_type) {
+                        const groups = rawData.data.merged_by_type;
+                        Object.keys(groups).forEach(type => {
+                            if (Array.isArray(groups[type])) {
+                                groups[type].forEach(item => {
+                                    item._disk_type = type;
+                                    allItems.push(item);
+                                });
+                            }
+                        });
+                    } else if (rawData && Array.isArray(rawData.data)) {
+                        allItems = rawData.data;
+                    }
+
+                    renderResults(allItems);
+
+                } catch (err) {
+                    console.error(err);
+                    debug.classList.remove('hidden');
+                    debug.innerHTML = `❌ 错误: ${err.message}<br>请检查网络或稍后再试。`;
+                    status.innerHTML = '';
+                    list.innerHTML = '';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>搜索</span><i class="ph ph-arrow-right"></i>`;
+                }
             }
 
-            ui.status.innerHTML = `<p class="text-sm text-gray-400 mb-4 px-2">找到约 ${items.length} 个结果</p>`;
-
-            let html = '';
-            items.forEach((item, index) => {
-                const title = item.note || item.title || "未知资源"; 
-                const link = item.url || item.link || "#";
-                const typeRaw = item._disk_type || item.source || "cloud";
-                const timeRaw = item.datetime || item.time || "";
-                
-                // 简单的日期格式化
-                let time = timeRaw;
-                if(timeRaw.includes('T')) {
-                    try { time = new Date(timeRaw).toLocaleDateString(); } catch(e){}
+            function renderResults(items) {
+                list.innerHTML = '';
+                if (!items || items.length === 0) {
+                    status.innerHTML = `<div class="text-center py-10 text-gray-500">什么也没搜到 🐢</div>`;
+                    return;
                 }
 
-                let typeLabel = typeRaw;
-                let tagClass = "bg-gray-100 text-gray-600";
+                status.innerHTML = `<p class="text-sm text-gray-400 mb-4 px-2">找到 ${items.length} 个资源</p>`;
                 
-                if(typeRaw.includes("ali")) { typeLabel = "阿里云盘"; tagClass = "bg-orange-50 text-orange-600"; }
-                else if(typeRaw.includes("quark")) { typeLabel = "夸克云盘"; tagClass = "bg-blue-50 text-blue-600"; }
-                else if(typeRaw.includes("baidu")) { typeLabel = "百度网盘"; tagClass = "bg-red-50
+                let html = '';
+                items.forEach((item, index) => {
+                    const title = item.note || item.title || "未知资源"; 
+                    const link = item.url || item.link || "#";
+                    const typeRaw = item._disk_type || item.source || "cloud";
+                    const timeRaw = item.datetime || item.time || "";
+                    
+                    let time = timeRaw;
+                    if(timeRaw.includes('T')) try { time = new Date(timeRaw).toLocaleDateString(); } catch(e){}
+
+                    let typeLabel = typeRaw;
+                    let tagClass = "bg-gray-100 text-gray-600";
+                    if(typeRaw.includes("ali")) { typeLabel = "阿里云盘"; tagClass = "bg-orange-50 text-orange-600"; }
+                    else if(typeRaw.includes("quark")) { typeLabel = "夸克云盘"; tagClass = "bg-blue-50 text-blue-600"; }
+                    else if(typeRaw.includes("baidu")) { typeLabel = "百度网盘"; tagClass = "bg-red-50 text-red-600"; }
+
+                    html += `
+                    <a href="${link}" target="_blank" class="block group animate-fade-in" style="animation-delay: ${index * 0.05}s">
+                        <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="px-2 py-0.5 rounded text-xs font-medium ${tagClass}">${typeLabel}</span>
+                                <span class="text-xs text-gray-400">${time}</span>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                                ${title.replace(/<[^>]+>/g, '')}
+                            </h3>
+                        </div>
+                    </a>`;
+                });
+                list.innerHTML = html;
+            }
+        });
+    </script>
+</body>
+</html>
